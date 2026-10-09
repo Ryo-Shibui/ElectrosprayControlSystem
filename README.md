@@ -85,7 +85,7 @@ The tested default is 0 to 6 kV mapped to 0 to 5 V. Change these values to match
 ## Install on a Fresh PC
 
 1. Run Windows Update.
-2. Install Visual Studio 2022.
+2. Install Visual Studio.
 3. In Visual Studio Installer, select the `.NET desktop development` workload.
 4. Install the .NET Framework 4.8.1 Developer Pack if Visual Studio cannot target `net481`.
 5. Install NI-DAQmx after Visual Studio. Keep .NET/API support enabled.
