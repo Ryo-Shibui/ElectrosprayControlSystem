@@ -70,7 +70,7 @@ The tested default is 0 to 6 kV mapped to 0 to 5 V. Change these values to match
 ## Prepare These Items
 
 - 64-bit Windows 10 or Windows 11 PC
-- Visual Studio 2022
+- Visual Studio (for now "10/09/2026", Visual Studio 2026)
 - .NET Framework 4.8.1 Developer Pack
 - NI-DAQmx with .NET/API support
 - NI DAQ device with the analog I/O capabilities described above
