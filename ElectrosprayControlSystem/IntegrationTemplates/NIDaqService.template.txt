@@ -1,0 +1,31 @@
+Example outline for a future NI-DAQmx-backed implementation
+===========================================================
+
+1. Install NI-DAQmx with .NET support.
+2. Add references exposed by the installed driver.
+3. Implement IDaqService roughly as follows:
+
+- InitializeAsync:
+  - create one AO task for the HV control input
+  - create one AI task for Vmoni and Imoni
+  - configure ranges and terminal modes
+  - start the tasks
+
+- SetControlVoltageAsync(voltageV):
+  - write one sample to the AO channel
+
+- ReadMonitorsAsync:
+  - read one scan from the two AI channels
+  - map channel 0 -> Vmoni, channel 1 -> Imoni
+
+- ShutdownAsync:
+  - write safe AO value (often 0.0 V)
+  - stop and dispose all tasks
+
+Recommended extra settings to add before hardware deployment:
+- AO physical channel name
+- AI Vmoni channel name
+- AI Imoni channel name
+- AI ranges
+- terminal configuration (RSE / NRSE / Differential)
+- monitor scaling coefficients if the monitor ports are not 1:1 in volts

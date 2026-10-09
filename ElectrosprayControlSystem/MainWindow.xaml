@@ -1,0 +1,402 @@
+<Window x:Class="ElectrosprayControlSystem.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        mc:Ignorable="d"
+        Title="Electrospray Control System"
+        Width="1200"
+        Height="800"
+        MinWidth="800"
+        MinHeight="500"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4,0,8" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="0,6,8,0" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="MinWidth" Value="120" />
+        </Style>
+        <Style x:Key="SectionBorderStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#D0D7DE" />
+            <Setter Property="Background" Value="#FAFBFC" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="#F4F6F8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12">
+                <TextBlock Text="Experiment Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="HV module mapping" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Minimum HV [kV]" />
+                                <TextBox Text="{Binding Settings.HvMinimumKv, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Maximum HV [kV]" />
+                                <TextBox Text="{Binding Settings.HvMaximumKv, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Module control max [V]" />
+                        <TextBox Text="{Binding Settings.ControlSignalMaximumV, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                        <TextBlock Text="Target applied voltage [kV]" />
+                        <TextBox Text="{Binding Settings.TargetAppliedVoltageKv, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                        <TextBlock Text="Measurement duration [s]" />
+                        <TextBox Text="{Binding Settings.TotalSamplingTimeSeconds, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                        <TextBlock Text="Sample interval [ms]" />
+                        <TextBox Text="{Binding Settings.SampleIntervalMilliseconds, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                        <TextBlock Text="Save folder path" />
+                        <Grid Margin="0,4,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Margin="0"
+                                     Text="{Binding Settings.SaveFolderPath, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button Grid.Column="2"
+                                    Content="Path"
+                                    MinWidth="72"
+                                    Margin="0"
+                                    Command="{Binding BrowsePathCommand}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Actions" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <WrapPanel>
+                            <Button Content="Apply" Command="{Binding ApplyCommand}" />
+                            <Button Content="Stop Apply" Command="{Binding StopApplyCommand}" />
+                            <Button Content="Measure" Command="{Binding MeasureCommand}" />
+                            <Button Content="Stop Measure" Command="{Binding StopMeasureCommand}" />
+                            <Button Content="{Binding LightToggleButtonText}" Command="{Binding ToggleLightCommand}" />
+                            <Button Content="Refresh Hardware" Command="{Binding RefreshHardwareCommand}" />
+                        </WrapPanel>
+                        <TextBlock Margin="0,12,0,0"
+                                   Text="Vmoni and Imoni monitoring starts automatically when the window opens. The lower plots continue updating regardless of whether output is applied."
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,12,0,0"
+                                   Text="The Dino-Lite snapshot saved at the measurement midpoint uses the same zoomed framing currently shown in the preview. When the SDK camera backend is active, the Dino-Lite light is assumed to start ON, so the button first appears as Light Off."
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Liquid Supply" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding Pump.ConnectionText}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Pump.StatusText}" TextWrapping="Wrap" Margin="0,4,0,8" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Rate" />
+                                <TextBox Text="{Binding Pump.FlowRate, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Unit" />
+                                <ComboBox ItemsSource="{Binding Pump.RateUnits}"
+                                          SelectedItem="{Binding Pump.SelectedRateUnit}"
+                                          Margin="0,4,0,8" />
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox Content="{Binding Pump.DirectionText}"
+                                  IsChecked="{Binding Pump.IsInfuse}"
+                                  Margin="0,0,0,8" />
+
+                        <WrapPanel>
+                            <Button Content="Start"
+                                    Command="{Binding Pump.StartCommand}"
+                                    MinWidth="72"
+                                    Padding="8,6" />
+                            <Button Content="Stop"
+                                    Command="{Binding Pump.StopCommand}"
+                                    MinWidth="72"
+                                    Padding="8,6" />
+                            <Button Content="Purge"
+                                    Command="{Binding Pump.PurgeCommand}"
+                                    MinWidth="72"
+                                    Padding="8,6" />
+                        </WrapPanel>
+
+                        <Grid Margin="0,12,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Pump state" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Pump.PumpStateText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Dispensed / Alarm" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Pump.DispensedText}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Pump.AlarmText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Expander Header="Pump Settings"
+                                  IsExpanded="{Binding Pump.IsSettingsExpanded}"
+                                  Margin="0,4,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding Pump.AvailablePorts}"
+                                              SelectedItem="{Binding Pump.SelectedPortName}"
+                                              Margin="0,4,0,8" />
+                                    <Button Grid.Column="2"
+                                            Content="Refresh"
+                                            Command="{Binding Pump.RefreshPortsCommand}"
+                                            MinWidth="72"
+                                            Margin="0,4,0,8"
+                                            Padding="8,4" />
+                                </Grid>
+                                <Button Content="{Binding Pump.ConnectButtonText}"
+                                        Command="{Binding Pump.ConnectCommand}"
+                                        MinWidth="96"
+                                        Padding="8,6" />
+
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Baud" />
+                                        <TextBox Text="{Binding Pump.BaudRate, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Address" />
+                                        <TextBox Text="{Binding Pump.Address, UpdateSourceTrigger=LostFocus}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Syringe diameter [mm]" />
+                                <TextBox Text="{Binding Pump.SyringeDiameterMm, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                                <CheckBox Content="Continuous"
+                                          IsChecked="{Binding Pump.Continuous}"
+                                          Margin="0,0,0,4" />
+                                <TextBlock Text="Volume" />
+                                <TextBox Text="{Binding Pump.Volume, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+
+                                <Button Content="Refresh Status"
+                                        Command="{Binding Pump.RefreshStatusCommand}"
+                                        MinWidth="110"
+                                        Padding="8,6" />
+                                <TextBlock Text="Communication log" FontWeight="SemiBold" Margin="0,10,0,4" />
+                                <TextBox Text="{Binding Pump.CommunicationLog, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Height="90" />
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <Expander Header="USB-6001 Channels" IsExpanded="False">
+                        <StackPanel Margin="0,8,0,0">
+                            <TextBlock Text="DAQ device name" />
+                            <TextBox Text="{Binding Settings.DaqDeviceName, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="Analog output channel" />
+                            <TextBox Text="{Binding Settings.AnalogOutputChannel, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="Vmoni input channel" />
+                            <TextBox Text="{Binding Settings.VmoniChannel, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="Imoni differential pair" />
+                            <ComboBox SelectedValue="{Binding Settings.ImoniPositiveChannel, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Content"
+                                      Margin="0,4,0,8">
+                                <ComboBoxItem Content="ai0" />
+                                <ComboBoxItem Content="ai1" />
+                                <ComboBoxItem Content="ai2" />
+                                <ComboBoxItem Content="ai3" />
+                            </ComboBox>
+                            <TextBlock Text="Imoni negative channel (auto)" />
+                            <TextBox Text="{Binding Settings.ImoniNegativeChannel, Mode=OneWay}" IsReadOnly="True" />
+                        </StackPanel>
+                    </Expander>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <Expander Header="Monitor Scaling and Camera" IsExpanded="False">
+                        <StackPanel Margin="0,8,0,0">
+                            <TextBlock Text="Vmoni scale" />
+                            <TextBox Text="{Binding Settings.VmoniScale, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            <TextBlock Text="Vmoni offset" />
+                            <TextBox Text="{Binding Settings.VmoniOffset, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            <TextBlock Text="Imoni scale" />
+                            <TextBox Text="{Binding Settings.ImoniScale, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            <TextBlock Text="Imoni offset" />
+                            <TextBox Text="{Binding Settings.ImoniOffset, UpdateSourceTrigger=LostFocus}" Language="en-US" />
+                            <TextBlock Text="Preferred camera name filter" />
+                            <TextBox Text="{Binding Settings.PreferredCameraName, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="Preview zoom factor" />
+                            <TextBox Text="{Binding Settings.CameraPreviewZoomFactor, UpdateSourceTrigger=PropertyChanged}" Language="en-US" />
+                        </StackPanel>
+                    </Expander>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Calculated output" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="DAQ control voltage [V]" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding ComputedControlVoltageText}" FontSize="28" FontWeight="Bold" Margin="0,4,0,12" />
+                        <TextBlock Text="Apply state" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding AppliedStateText}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                        <TextBlock Text="Measurement state" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding MeasurementStateText}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                        <TextBlock Text="Hardware summary" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding HardwareSummary}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                        <TextBlock Text="Camera discovery" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding AvailableCameraText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Status" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1.3*" />
+                <RowDefinition Height="1.00*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="7*" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" Margin="0,0,8,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource SectionBorderStyle}" Margin="0,0,0,4">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Voltage (V)" FontWeight="SemiBold" FontSize="18" />
+                            <TextBlock Text="{Binding LatestVoltageText}" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding LatestVoltageSubText}" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding AppliedStateText}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" Style="{StaticResource SectionBorderStyle}" Margin="0,8,0,8">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Current (nA)" FontWeight="SemiBold" FontSize="18" />
+                            <TextBlock Text="{Binding LatestCurrentText}" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding LatestCurrentSubText}" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding MeasurementStateText}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Grid.Column="1" Style="{StaticResource SectionBorderStyle}" Margin="8,0,0,8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="Dino-Lite Preview" FontSize="20" FontWeight="SemiBold" DockPanel.Dock="Left" />
+                            <TextBlock Text="{Binding PreviewStatusText}" HorizontalAlignment="Right" />
+                        </DockPanel>
+                        <Border Grid.Row="1" Background="Black" CornerRadius="8" BorderThickness="1" BorderBrush="#202020">
+                            <Image Source="{Binding CurrentPreviewFrame}" Stretch="Uniform" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource SectionBorderStyle}" Grid.Column="0" Margin="0,0,6,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Voltage Trend (live)" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <ScottPlot:WpfPlot x:Name="VoltagePlot"
+                                           Grid.Row="1"
+                                           Margin="0,4,0,0"
+                                           MinHeight="300" />
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SectionBorderStyle}" Grid.Column="1" Margin="6,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Current Trend (live)" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <ScottPlot:WpfPlot x:Name="CurrentPlot"
+                                           Grid.Row="1"
+                                           Margin="0,4,0,0"
+                                           MinHeight="300" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

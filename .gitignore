@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+TestResults/
+*.user
+*.suo
+*.cache
+*.pdb
+*.exe
+*.zip
+*.csv
+Data/
+ElectrosprayControlSystem/ThirdParty/**/*.dll
+ElectrosprayControlSystem/bin/
+ElectrosprayControlSystem/obj/

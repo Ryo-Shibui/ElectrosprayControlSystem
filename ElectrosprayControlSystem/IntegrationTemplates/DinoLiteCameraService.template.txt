@@ -1,0 +1,30 @@
+Example outline for a future Dino-Lite SDK-backed implementation
+================================================================
+
+1. Install the Dino-Lite SDK package that matches your model and OS.
+2. Confirm whether the distributed assembly is x64 and which namespaces/classes it exposes.
+3. Implement ICameraService roughly as follows:
+
+- InitializeAsync:
+  - enumerate connected Dino-Lite devices
+  - select the intended camera
+  - start streaming / preview mode
+
+- GetPreviewFrameAsync:
+  - fetch the latest frame buffer from the SDK
+  - convert it to a BitmapSource for WPF
+
+- SaveStillAsync(filePath):
+  - request a still frame or reuse the latest preview frame
+  - encode and save as PNG
+
+- ShutdownAsync:
+  - stop stream
+  - release device/session handles
+
+Recommended extra settings to add later:
+- camera index or serial number
+- exposure / auto exposure
+- gain / brightness
+- frame size
+- frame rate
