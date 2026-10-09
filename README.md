@@ -1,180 +1,231 @@
 # Electrospray Control System
 
-NI USB-6001、Dino-Liteカメラ、NE-1000シリンジポンプを使って、エレクトロスプレー実験を半自動化するWindowsデスクトップソフトです。
+This is a Windows desktop application for automating an electrospray experiment. It combines voltage control, voltage/current monitoring, camera preview and image capture, and syringe-pump control in one WPF application.
 
-PCを買ったばかりでVisual Studioも入っていない状態から使えるように、必要なソフト、装置、配線、ビルド、操作手順をこのREADMEにまとめています。
+The goal of this README is that a person starting from a new Windows PC, without Visual Studio or device drivers installed yet, can understand what to prepare and how to run the program.
 
-## 何ができるか
+## What This Program Does
 
-- NI USB-6001のアナログ出力で高電圧モジュールの制御電圧を出す
-- VmoniとImoniをアナログ入力で常時監視する
-- Dino-Liteのライブプレビューを表示する
-- 指定した時間だけ測定し、CSVとメタデータを保存する
-- 測定時間の中央でDino-Lite画像を自動保存する
-- NE-1000シリンジポンプをRS-232で操作する
-- DAQ、カメラ、ポンプをできるだけ独立に復旧できる
+- Sends an analog control voltage to a high-voltage module through a National Instruments DAQ analog output
+- Continuously monitors Vmoni and Imoni through DAQ analog input channels
+- Shows a live Dino-Lite or DirectShow camera preview
+- Records a timed measurement to CSV and metadata files
+- Saves one camera image at the midpoint of a measurement
+- Controls an NE-1000 syringe pump over a Windows COM port
+- Keeps DAQ, camera, and pump recovery mostly independent, so one missing device does not necessarily block the others
 
-## 専用の装置か
+## Hardware Compatibility
 
-このソフトは特定の実験構成を前提にしています。別のDAQ、別のカメラ、別のポンプでもC#コードを修正すれば流用できますが、そのまま使う前提の装置は次です。
+The developer tested this workflow with an NI USB-6001, a Dino-Lite camera, and an NE-1000 syringe pump. The code is written around capabilities rather than USB-6001-only identification, so compatible alternatives may work if they expose the same interfaces.
 
-準備するもの:
+### DAQ
 
-- NI USB-6001
-- NI-DAQmx
-- 高電圧モジュール
-- 高電圧モジュールの制御入力、Vmoni出力、Imoni出力をUSB-6001へつなぐ配線
-- Dino-Lite Premier系カメラ
-- Dino-Lite SDKランタイムファイル
-- NE-1000シリンジポンプ
-- USB-RS232変換器またはRS-232ポート
-- Windows 10またはWindows 11の64 bit PC
-- 測定データ保存先フォルダ
+The DAQ path uses the NI-DAQmx .NET API. The software should work with National Instruments DAQ hardware that:
 
-公開リポジトリには、NIやDino-LiteのメーカーDLLは含めていません。各メーカーのインストーラまたはSDKから、自分のPCに正規に入手したファイルを配置してください。
+- is supported by NI-DAQmx on Windows;
+- appears in NI MAX;
+- has at least one analog output channel for the high-voltage module control signal;
+- has analog input channels for Vmoni and Imoni;
+- supports the selected voltage ranges;
+- supports RSE input for Vmoni;
+- supports one of the differential input pairs used for Imoni.
 
-## 新品PCで最初に入れるもの
+The default channel settings were developed for the tested USB-6001 setup:
 
-1. Windows Updateを実行する。
-2. Visual Studio 2022をインストールする。
-3. Visual Studio Installerで `.NET desktop development` ワークロードを選ぶ。
-4. .NET Framework 4.8.1 Developer Packをインストールする。Visual Studioで `net481` が選べれば追加作業は不要です。
-5. NI-DAQmxをインストールする。インストール時に.NET/APIサポートを有効にする。
-6. NI MAXを起動し、USB-6001が認識されていることを確認する。
-7. Dino-Lite用ソフトウェア、ドライバ、SDKをインストールする。
-8. NE-1000ポンプ用のUSB-RS232変換器を接続し、WindowsでCOMポートが見えることを確認する。
+- DAQ device name: `Dev3`
+- Analog output channel: `ao0`
+- Vmoni input channel: `ai3`
+- Imoni differential pair: `ai0` / `ai4`
 
-## メーカーDLLの配置
+On another PC or another NI DAQ, use NI MAX to find the actual device name and channel names, then update them in the GUI.
 
-NI-DAQmxの.NET DLLが通常の場所から読めないPCでは、次のフォルダへ自分のPCにインストール済みのDLLをコピーしてください。
+### Camera
+
+The camera path tries the Dino-Lite SDK first and then falls back to a normal Windows DirectShow camera. This means:
+
+- Dino-Lite cameras can use the SDK path when `DNX64.dll` and `libusbK.dll` are available.
+- A camera that appears as a normal Windows video device may work through the DirectShow fallback.
+- Dino-Lite-specific functions, such as SDK light control behavior, require the Dino-Lite SDK runtime.
+
+### Syringe Pump
+
+The pump panel was developed for an NE-1000 syringe pump using its serial command set. It should work with an NE-1000-compatible pump that:
+
+- uses the same command protocol;
+- is reachable through a Windows COM port;
+- can communicate at 19200 baud, 8 data bits, no parity, 1 stop bit, and no flow control.
+
+Other pump models will require code changes unless they intentionally implement the same serial protocol.
+
+### High-Voltage Module
+
+The high-voltage module does not have to be one exact model if it accepts an analog control voltage. The GUI maps desired kV to DAQ output voltage using:
+
+- HV minimum
+- HV maximum
+- Control signal maximum
+
+The tested default is 0 to 6 kV mapped to 0 to 5 V. Change these values to match the actual high-voltage module before applying output.
+
+## Prepare These Items
+
+- 64-bit Windows 10 or Windows 11 PC
+- Visual Studio 2022
+- .NET Framework 4.8.1 Developer Pack
+- NI-DAQmx with .NET/API support
+- NI DAQ device with the analog I/O capabilities described above
+- High-voltage module and safe wiring to the DAQ analog output
+- Vmoni and Imoni wiring to DAQ analog inputs
+- Dino-Lite camera or another Windows-visible camera
+- Dino-Lite SDK runtime files if SDK features are needed
+- NE-1000 or compatible syringe pump if pump control is needed
+- USB-RS232 adapter or serial port for the pump
+- Folder for measurement data
+
+## Install on a Fresh PC
+
+1. Run Windows Update.
+2. Install Visual Studio 2022.
+3. In Visual Studio Installer, select the `.NET desktop development` workload.
+4. Install the .NET Framework 4.8.1 Developer Pack if Visual Studio cannot target `net481`.
+5. Install NI-DAQmx after Visual Studio. Keep .NET/API support enabled.
+6. Open NI MAX and confirm that the DAQ device is visible.
+7. Install the camera driver and Dino-Lite SDK if using the Dino-Lite SDK path.
+8. Connect the USB-RS232 adapter for the pump and confirm that Windows shows a COM port.
+
+## Vendor DLLs
+
+This public repository does not include NI or Dino-Lite vendor DLLs. Obtain them from the official driver or SDK installers for your own PC.
+
+If NI-DAQmx .NET assemblies are not found automatically, copy your installed files to:
 
 ```text
 ElectrosprayControlSystem\ThirdParty\NI\
 ```
 
-配置するファイル:
+Expected files:
 
 ```text
 NationalInstruments.DAQmx.dll
 NationalInstruments.Common.dll
 ```
 
-Dino-Lite SDKを使う場合は、次のフォルダへSDKランタイムをコピーしてください。
+If using the Dino-Lite SDK path, copy the SDK runtime files to:
 
 ```text
 ElectrosprayControlSystem\ThirdParty\DinoLite\
 ```
 
-配置するファイル:
+Expected files:
 
 ```text
 DNX64.dll
 libusbK.dll
 ```
 
-DLLがない場合でも、Dino-LiteがWindowsのカメラとして見えていればDirectShow経由のプレビューへフォールバックします。ただし、Dino-Lite SDK固有機能を使うにはSDK DLLが必要です。
+If these Dino-Lite files are absent, the application can still try DirectShow if the camera appears as a normal Windows camera.
 
-## ダウンロードして開く
+## Build and Run
 
-1. GitHubページの `Code` からZIPをダウンロードする、またはGitでcloneする。
-2. ZIPの場合は任意の作業フォルダへ展開する。
-3. 必要に応じてメーカーDLLを `ThirdParty` フォルダへ配置する。
-4. `ElectrosprayControlSystem.sln` をVisual Studio 2022で開く。
-5. NuGet restoreを許可する。
-6. 画面上部の構成を `Release`、プラットフォームを `x64` にする。
-7. `Build` -> `Build Solution` を実行する。
-8. `Start` またはF5で起動する。
+1. Download the repository from GitHub with `Code` -> `Download ZIP`, or clone it with Git.
+2. If you downloaded a ZIP file, extract it to a normal working folder.
+3. Place vendor DLLs under `ThirdParty` if your setup needs local copies.
+4. Open `ElectrosprayControlSystem.sln` in Visual Studio 2022.
+5. Allow NuGet restore.
+6. Select `Release` and `x64`.
+7. Run `Build` -> `Build Solution`.
+8. Start the program with `Start` or `F5`.
 
-PowerShellでビルドする場合:
+You can also build from PowerShell:
 
 ```powershell
 .\build-release.ps1
 ```
 
-ビルド後の実行ファイルは通常、次の場所に作成されます。
+The built application is normally created at:
 
 ```text
 ElectrosprayControlSystem\bin\x64\Release\net481\ElectrosprayControlSystem.exe
 ```
 
-## USB-6001の初期設定
+## DAQ Settings
 
-初期値は次の通りです。自分のPCではNI MAXでデバイス名を確認し、必要ならGUIで変更してください。
+The GUI exposes the important DAQ settings. Confirm them before applying voltage:
 
-- DAQ device name: `Dev3`
-- Analog output channel: `ao0`
-- Vmoni input channel: `ai3`
-- Imoni differential pair: `ai0` / `ai4`
-- HV minimum: 0 kV
-- HV maximum: 6 kV
-- Control signal maximum: 5 V
-- Vmoni scale: 1200
-- Imoni scale: 100
+- `DAQ device name`
+- `Analog output channel`
+- `Vmoni input channel`
+- `Imoni differential pair`
+- `Vmoni scale`
+- `Vmoni offset`
+- `Imoni scale`
+- `Imoni offset`
 
-Imoniの差動入力はUSB-6001の仕様に合わせ、次の組み合わせから選びます。
+The Imoni differential input selector supports these USB-6001-style differential pairs:
 
 - `ai0` / `ai4`
 - `ai1` / `ai5`
 - `ai2` / `ai6`
 - `ai3` / `ai7`
 
-VmoniはRSE入力、Imoniは差動入力として作成されます。
+If a different NI DAQ uses different valid differential channel naming or pairing, the code may need to be adjusted.
 
-## 基本操作
+## Basic Operation
 
-1. USB-6001、Dino-Lite、NE-1000ポンプをPCへ接続する。
-2. NI MAXでUSB-6001のデバイス名を確認する。
-3. ソフトを起動する。
-4. `USB-6001 Channels` でデバイス名とチャンネルを確認する。
-5. HV範囲、制御電圧上限、Vmoni/Imoni換算係数を確認する。
-6. `Refresh Hardware` でDAQとカメラを再検出する。
-7. `Applied voltage [kV]` に目標電圧を入れる。
-8. `Apply` を押すとUSB-6001のAOから制御電圧が出る。
-9. `Stop Apply` を押すとAOが0 Vに戻る。
-10. 測定時間、サンプル間隔、保存先を設定する。
-11. `Measure` を押すとCSV、メタデータ、中央時刻のDino-Lite画像が保存される。
-12. 途中終了したい場合は `Stop Measure` を押す。
+1. Connect the DAQ, camera, and pump devices that you plan to use.
+2. Use NI MAX to confirm the DAQ device name and channel names.
+3. Start the application.
+4. Confirm or edit the DAQ settings in `USB-6001 Channels`.
+5. Confirm the HV range, control voltage maximum, and Vmoni/Imoni scaling.
+6. Click `Refresh Hardware` to retry DAQ and camera discovery.
+7. Enter the target voltage in `Applied voltage [kV]`.
+8. Click `Apply` to output the corresponding DAQ control voltage.
+9. Click `Stop Apply` to return the DAQ output to 0 V.
+10. Set measurement duration, sampling interval, and save path.
+11. Click `Measure` to save CSV, metadata, and the midpoint camera image.
+12. Click `Stop Measure` if you need to end recording early.
 
-測定ファイルは保存先の中にタイムスタンプ付きフォルダとして作成されます。
+Measurement files are written to a timestamped session folder inside the selected save folder.
 
-## NE-1000シリンジポンプ
+## NE-1000 Pump Operation
 
-`Liquid Supply` パネルでNE-1000を操作します。
+Use the `Liquid Supply` panel for pump control.
 
-1. USB-RS232変換器を接続する。
-2. `Pump Settings` を開く。
-3. `Refresh` でCOMポートを更新する。
-4. ポンプのCOMポートを選ぶ。
-5. 通信条件を確認する。初期値は19200 baud、8 data bits、no parity、1 stop bit、no flow controlです。
-6. `Connect` を押す。
-7. シリンジ径、流量、単位、Infuse/Withdraw、体積またはContinuousを設定する。
-8. `Start` で送液開始、`Stop` で停止する。
-9. `Purge` は安全確認後に使ってください。
+1. Connect the USB-RS232 adapter.
+2. Open `Pump Settings`.
+3. Click `Refresh` to update COM ports.
+4. Select the pump COM port.
+5. Confirm the serial settings. The default is 19200 baud, 8 data bits, no parity, 1 stop bit, no flow control.
+6. Click `Connect`.
+7. Set syringe diameter, flow rate, unit, direction, and volume or continuous mode.
+8. Click `Start` to begin pumping.
+9. Click `Stop` to stop pumping.
+10. Use `Purge` only after confirming the physical setup is safe.
 
-ポンプ、DAQ、カメラは独立に扱われます。1つが未接続でも、他の装置が使える場合は起動を継続します。
+## Before Using Experimental Data
 
-## 実験前の確認
+Check the following on the actual setup:
 
-- USB-6001がNI MAXで見えている
-- GUIの `DAQ device name` がNI MAXの名前と一致している
-- AO出力が高電圧モジュールの制御入力へ正しく入っている
-- `Apply` 前に高電圧側の安全確認が済んでいる
-- VmoniとImoniの配線と換算係数が正しい
-- Dino-Liteプレビューが表示される
-- 測定中央で画像が保存される
-- NE-1000が選択COMポートで応答する
-- 保存先フォルダにCSV、メタデータ、画像が作成される
+- The DAQ device is visible in NI MAX.
+- The GUI device name matches NI MAX.
+- The analog output is wired to the high-voltage module control input correctly.
+- The high-voltage system is safe before clicking `Apply`.
+- Vmoni and Imoni wiring and scaling are correct.
+- The camera preview is visible.
+- A midpoint image is saved during measurement.
+- The pump responds on the selected COM port.
+- CSV, metadata, and image files are created in the selected save folder.
 
-## トラブルシュート
+## Troubleshooting
 
-- DAQが見つからない場合: NI-DAQmx、NI MAX、USB接続、デバイス名を確認してください。
-- `NationalInstruments.DAQmx.dll` が見つからない場合: NI-DAQmxの.NETサポートを入れるか、`ThirdParty\NI` へDLLを配置してください。
-- Dino-Lite SDKが見つからない場合: `ThirdParty\DinoLite` に `DNX64.dll` と `libusbK.dll` があるか確認してください。
-- カメラが表示されない場合: WindowsのカメラデバイスとしてDino-Liteが認識されているか確認してください。
-- ポンプが応答しない場合: COMポート、ボーレート、ポンプアドレス、RS-232ケーブルを確認してください。
-- 測定ファイルが作られない場合: 保存先フォルダの書き込み権限を確認してください。
-- 高電圧が意図と違う場合: `HV minimum`、`HV maximum`、`Control signal maximum` と実機の制御入力仕様を確認してください。
+- DAQ not found: check NI-DAQmx, NI MAX, USB connection, and device name.
+- `NationalInstruments.DAQmx.dll` not found: install NI-DAQmx .NET support or place the DLLs under `ThirdParty\NI`.
+- Dino-Lite SDK not found: place `DNX64.dll` and `libusbK.dll` under `ThirdParty\DinoLite`.
+- Camera not visible: confirm that Windows sees it as a camera device.
+- Pump not responding: check COM port, baud rate, pump address, and RS-232 cabling.
+- No measurement files: check write permission for the save folder.
+- Applied high voltage is wrong: check HV minimum, HV maximum, control signal maximum, and the high-voltage module control-input specification.
 
-## 補足
+## More Setup Notes
 
-詳細なセットアップメモは `SETUP_GUIDE.md` にもあります。このREADMEを優先し、不足する細部を確認したい場合に参照してください。
+`SETUP_GUIDE.md` contains additional setup notes. Use this README as the main guide, then refer to `SETUP_GUIDE.md` for extra detail.
